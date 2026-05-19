@@ -57,7 +57,7 @@ V1 不做哪些事情，以及为什么。
 - **影响**：仅使用向量语义检索，不结合关键词匹配
 - **理由**：
   - BM25 需要额外的全文索引（PostgreSQL `tsvector`）或独立的搜索引擎（Elasticsearch/Meilisearch）
-  - 向量检索对中文语义理解已经足够好（尤其 text-embedding-3-small 对中文优化过）
+  - 向量检索对中文语义理解已经足够好（尤其 BAAI/bge-m3 对中文优化过）
   - 混合检索的难点在于融合策略（RRF / 加权求和），调参成本高
   - `retriever.ts` 可扩展为多策略检索 + 融合，架构已预留
 - **何时做**：V2.0，出现专有名词/精确匹配场景时引入
@@ -100,20 +100,20 @@ V1 不做哪些事情，以及为什么。
 
 ---
 
-## 9. 为什么 V1 使用 OpenAI Embedding + DeepSeek Chat
+## 9. 为什么 V1 使用 SiliconFlow Embedding + DeepSeek Chat
 
 - **影响**：RAG 管道的 embedding 和生成分别调用不同供应商
 - **理由**：
-  - Embedding 是 RAG 的基础设施，直接影响检索质量。OpenAI `text-embedding-3-small` 是业界标杆，在 MTEB 中文基准上表现稳定，没有必要为省几毛钱在 embedding 环节引入不确定性
-  - DeepSeek Chat 的中文生成能力与 GPT-4o-mini 相当甚至更优，且通常具备较低的推理成本。对于作品集项目的调用量，这个差异不明显，但"会做成本控制"本身就是一个面试加分项
+  - Embedding 是 RAG 的基础设施，直接影响检索质量。SiliconFlow 的 `BAAI/bge-m3` 是中文 embedding 领域的标杆开源模型，在 MTEB 中文基准上表现优异，支持中英双语，1024 维向量在保证检索质量的同时比 1536 维更省存储和计算
+  - SiliconFlow 提供稳定的 API 托管服务，国内网络延迟低，注册即有免费额度，无需海外信用卡
+  - DeepSeek Chat 的中文生成能力与 GPT-4o-mini 相当甚至更优，且推理成本显著更低。`deepseek-v4-flash` 作为默认模型兼顾速度与成本，`deepseek-v4-pro` 预留给需要更高质量推理的场景
   - 两套 API 都兼容 OpenAI SDK 格式，统一使用 `openai` npm 包即可，不增加依赖
   - `lib/rag/embedder.ts` 和 `lib/rag/generator.ts` 各自独立，解耦意味着：
-    - 后续想换 Azure OpenAI、零一万物、通义千问作为 Chat 供应商，只改 `generator.ts`
-    - 想用 Cohere Embed 或本地 bge-small-zh 做 embedding，只改 `embedder.ts`
-    - 两种变更互不阻塞
+    - 后续想换通义千问、零一万物作为 Chat 供应商，只改 `generator.ts`，Chat 模型切换不涉及数据库
+    - 想切换 embedding 供应商（如通义千问 Embedding、智谱 Embedding、或本地部署 BGE 系列模型），只改 `embedder.ts`，但需要注意不同模型的向量维度可能不同，切换时需调整 pgvector 字段维度并重新生成已有文档向量
   - 面试时这是一个很好的架构话题："为什么 embedding 和生成不放在同一个供应商？"——答案就是解耦、降本、灵活替换
-- **风险**：DeepSeek 的 API 稳定性不如 OpenAI，需在 `generator.ts` 中加入 retry 逻辑
-- **何时重新评估**：如果 OpenAI 调整 embedding 定价，或 DeepSeek 服务频繁不可用，重新评估
+- **风险**：SiliconFlow 作为国内 API 供应商，服务成熟度低于 OpenAI，需在 `embedder.ts` 中加入 retry 逻辑；DeepSeek API 稳定性也需关注，在 `generator.ts` 中同样加入 retry
+- **何时重新评估**：如果 SiliconFlow 频繁不可用，可优先评估切换至其他国内可用的 Embedding 服务（如通义千问 Embedding、智谱 Embedding，或本地部署 BGE 系列模型）。由于不同 embedding 模型向量维度可能不同，切换时需同步调整 pgvector 字段维度，并重新生成已有文档向量；如果 DeepSeek 服务不稳定，可切换至通义千问、零一万物等其他兼容 OpenAI 格式的 Chat 供应商（Chat 模型切换不涉及数据库变更）
 
 ---
 

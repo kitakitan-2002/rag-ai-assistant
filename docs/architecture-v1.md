@@ -15,7 +15,7 @@
 | 前端框架 | Next.js (App Router) + TypeScript | — |
 | UI | Tailwind CSS + shadcn/ui | — |
 | 数据库 | Supabase (pgvector) | — |
-| Embedding | OpenAI `text-embedding-3-small` | 1536 维，稳定可靠，中文效果好 |
+| Embedding | SiliconFlow `BAAI/bge-m3` | 1024 维，中文效果好，国内可直接使用 |
 | Chat 生成 | DeepSeek Chat API | 模型名由环境变量 `DEEPSEEK_CHAT_MODEL` 指定 |
 | 部署 | Vercel | — |
 
@@ -23,9 +23,9 @@
 
 Embedding 和 Chat 使用不同的模型供应商，解耦设计：
 
-- **Embedding（OpenAI）**：向量化是 RAG 的基石。OpenAI embedding 服务经过大规模验证，稳定性和业界最好。MVP 阶段不应在 embedding 质量上引入变量。
-- **Chat 生成（DeepSeek）**：DeepSeek 中文理解能力强，通常具备较低推理成本。Chat 模型通过环境变量配置，方便替换为其他供应商（如零一万物、通义千问、或切回 OpenAI）。
-- **解耦收益**：`lib/rag/embedder.ts` 和 `lib/rag/generator.ts` 各自独立，互不依赖。更换任一供应商只需修改对应文件，另一端不受影响。
+- **Embedding（SiliconFlow）**：向量化是 RAG 的基石。SiliconFlow 托管的 `BAAI/bge-m3` 模型是中文 embedding 领域的标杆开源方案，1024 维向量兼顾质量与效率。SiliconFlow 国内可直接注册使用，无需海外信用卡。
+- **Chat 生成（DeepSeek）**：DeepSeek 中文理解能力强，推理成本低。默认使用 `deepseek-v4-flash` 兼顾速度与成本，`deepseek-v4-pro` 预留给需要更高质量推理的场景。Chat 模型通过环境变量配置，方便替换为其他供应商（如零一万物、通义千问）。
+- **解耦收益**：`lib/rag/embedder.ts` 和 `lib/rag/generator.ts` 各自独立，互不依赖。Chat 供应商切换只改 `generator.ts`，不影响数据库；Embedding 供应商切换只改 `embedder.ts`，但需注意不同模型向量维度可能不同，切换时需同步调整 pgvector 字段维度并重新生成已有文档向量。
 
 ---
 
@@ -122,7 +122,7 @@ CREATE TABLE document_chunks (
   document_id   UUID NOT NULL REFERENCES documents(id) ON DELETE CASCADE,
   chunk_index   INTEGER NOT NULL,
   content       TEXT NOT NULL,
-  embedding     VECTOR(1536),
+  embedding     VECTOR(1024),
   metadata      JSONB DEFAULT '{}',
   created_at    TIMESTAMPTZ DEFAULT now()
 );
@@ -177,7 +177,7 @@ Request:  { query: string }
 Response: { answer: string, sources: Source[] }
 
 流程:
-  1. 将 query 向量化（OpenAI embedding）
+  1. 将 query 向量化（SiliconFlow embedding）
   2. pgvector 余弦检索 top-5 chunks
   3. 过滤 similarity < SIMILARITY_THRESHOLD（默认 0.4，可配置）的结果
   4. 构建 system/user prompt
@@ -204,7 +204,7 @@ interface Source {
 
 ```
 enterprise-kb-rag/
-├── .env.local                    # OPENAI_API_KEY, DEEPSEEK_API_KEY, SUPABASE 配置等
+├── .env.local                    # SILICONFLOW_API_KEY, DEEPSEEK_API_KEY, SUPABASE 配置等
 ├── package.json
 ├── next.config.ts
 ├── tailwind.config.ts
@@ -256,7 +256,7 @@ enterprise-kb-rag/
 │   │   └── pipeline.ts          # 入库流水线（解析 → 切分 → embed → 入库）
 │   │
 │   ├── rag/
-│   │   ├── embedder.ts          # OpenAI Embedding 封装（text-embedding-3-small）
+│   │   ├── embedder.ts          # SiliconFlow Embedding 封装（BAAI/bge-m3）
 │   │   ├── chunker.ts           # 文本切分
 │   │   ├── retriever.ts         # pgvector 检索
 │   │   ├── prompt-builder.ts    # Prompt 构建
@@ -377,10 +377,10 @@ enterprise-kb-rag/
 |------|-----|------|
 | Chunk size | 500 字符 | 中文约 250 字，适配嵌入模型的上下文 |
 | Chunk overlap | 50 字符 | 防止关键信息被切断 |
-| Embedding 模型 | `text-embedding-3-small` | 1536 维，性价比最高 |
+| Embedding 模型 | `BAAI/bge-m3` | 1024 维，中文 embedding 标杆，国内可直接使用 |
 | 检索 Top-K | 5 | 控制上下文长度 |
 | 相似度阈值 | 0.4（默认，抽离为配置常量） | 余弦相似度，后续根据测试数据调优。设 0.4 不设 0.75：避免 MVP 阶段因阈值过高导致无结果 |
-| 生成模型 | 由 `DEEPSEEK_CHAT_MODEL` 环境变量指定（默认 `deepseek-chat`） | DeepSeek 中文能力强，推理成本较低；模型名可配置，方便切换 |
+| 生成模型 | 由 `DEEPSEEK_CHAT_MODEL` 环境变量指定（默认 `deepseek-v4-flash`），高质量场景可切换 `deepseek-v4-pro` | DeepSeek 中文能力强，flash 兼顾速度与成本；模型名可配置，方便切换 |
 
 ---
 
@@ -388,24 +388,29 @@ enterprise-kb-rag/
 
 | 变量名 | 说明 | 示例 |
 |--------|------|------|
-| `OPENAI_API_KEY` | OpenAI API Key（仅用于 Embedding） | `sk-...` |
+| `SILICONFLOW_API_KEY` | SiliconFlow API Key（仅用于 Embedding） | `sk-...` |
+| `SILICONFLOW_BASE_URL` | SiliconFlow API 地址 | `https://api.siliconflow.cn/v1` |
+| `EMBEDDING_MODEL` | Embedding 模型名 | `BAAI/bge-m3` |
 | `DEEPSEEK_API_KEY` | DeepSeek API Key（仅用于 Chat 生成） | `sk-...` |
 | `DEEPSEEK_BASE_URL` | DeepSeek API 地址 | `https://api.deepseek.com` |
-| `DEEPSEEK_CHAT_MODEL` | Chat 模型名，方便后续切换 | `deepseek-chat` |
+| `DEEPSEEK_CHAT_MODEL` | Chat 模型名，默认 `deepseek-v4-flash`，高质量场景可设 `deepseek-v4-pro` | `deepseek-v4-flash` |
 | `NEXT_PUBLIC_SUPABASE_URL` | Supabase 项目 URL | `https://xxx.supabase.co` |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase 匿名密钥 | `eyJ...` |
 
 ### 代码中如何使用
 
 ```typescript
-// lib/rag/embedder.ts — 固定使用 OpenAI
+// lib/rag/embedder.ts — 使用 SiliconFlow（兼容 OpenAI SDK 格式）
 import OpenAI from "openai";
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+const siliconflow = new OpenAI({
+  apiKey: process.env.SILICONFLOW_API_KEY,
+  baseURL: process.env.SILICONFLOW_BASE_URL || "https://api.siliconflow.cn/v1",
+});
 
 export async function embed(texts: string[]) {
-  const res = await openai.embeddings.create({
-    model: "text-embedding-3-small",
+  const res = await siliconflow.embeddings.create({
+    model: process.env.EMBEDDING_MODEL || "BAAI/bge-m3",
     input: texts,
   });
   return res.data.map((d) => d.embedding);
@@ -423,7 +428,7 @@ const deepseek = new OpenAI({
 
 export async function generate(systemPrompt: string, userPrompt: string) {
   const res = await deepseek.chat.completions.create({
-    model: process.env.DEEPSEEK_CHAT_MODEL || "deepseek-chat",
+    model: process.env.DEEPSEEK_CHAT_MODEL || "deepseek-v4-flash",
     messages: [
       { role: "system", content: systemPrompt },
       { role: "user", content: userPrompt },
@@ -433,7 +438,7 @@ export async function generate(systemPrompt: string, userPrompt: string) {
 }
 ```
 
-> DeepSeek API 兼容 OpenAI Chat Completions 调用方式，可通过 OpenAI SDK 配置 `baseURL` 和 `apiKey` 接入。选择 OpenAI SDK 作为统一接口层可降低供应商锁定风险——后续任何兼容 OpenAI 调用格式的模型供应商，切换成本都很低。
+> SiliconFlow 和 DeepSeek 的 API 均兼容 OpenAI SDK 调用格式，可统一使用 `openai` npm 包通过 `baseURL` + `apiKey` 接入。选择 OpenAI SDK 作为统一接口层可降低供应商锁定风险。Chat 供应商切换通常只需调整 `generator.ts` 或环境变量；Embedding 供应商切换除调整 `embedder.ts` 或环境变量外，还需确认向量维度是否变化，并在必要时同步调整 pgvector 字段维度与重新生成已有文档向量。
 
 ---
 
