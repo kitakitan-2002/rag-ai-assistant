@@ -1,3 +1,7 @@
+> ⚠️ Deprecated Draft
+> 本文件是早期架构草稿，仅用于历史记录。当前实现以 docs/architecture-v1.md 为准。
+> 本文件中可能包含 OpenAI / 1536 维 / text-embedding-3-small 等旧方案，不再作为开发依据。
+
 # 企业知识库 RAG 助手 — 架构设计文档（原始完整方案）
 
 ## 1. 产品功能大纲
