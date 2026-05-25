@@ -30,6 +30,13 @@ export async function POST(request: Request) {
   }
 
   const content = await file.text();
+  if (!content.trim()) {
+    return NextResponse.json(
+      { error: "文件内容不能为空" },
+      { status: 400 }
+    );
+  }
+
   const supabase = getServerClient();
 
   const { data: doc, error: insertError } = await supabase
@@ -62,7 +69,23 @@ export async function POST(request: Request) {
       status: "ready",
       chunk_count: result.chunkCount,
     });
-  } catch {
+  } catch (e) {
+    console.error("文档处理失败:", e);
     return NextResponse.json({ error: "文档处理失败" }, { status: 500 });
   }
+}
+
+export async function GET() {
+  const supabase = getServerClient();
+
+  const { data, error } = await supabase
+    .from("documents")
+    .select("id, filename, file_type, status, chunk_count, created_at")
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    return NextResponse.json({ error: "获取文档列表失败" }, { status: 500 });
+  }
+
+  return NextResponse.json(data ?? []);
 }
