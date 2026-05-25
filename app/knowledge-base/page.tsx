@@ -17,6 +17,10 @@ export default function KnowledgeBasePage() {
   const [documents, setDocuments] = useState<Document[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [password, setPassword] = useState(() => {
+    if (typeof window === "undefined") return "";
+    return localStorage.getItem("demo_access_password") ?? "";
+  });
 
   const fetchDocuments = useCallback(async () => {
     setLoading(true);
@@ -57,7 +61,23 @@ export default function KnowledgeBasePage() {
         </p>
       </div>
 
-      <FileUploadZone onUploadSuccess={fetchDocuments} />
+      <FileUploadZone onUploadSuccess={fetchDocuments} password={password} />
+
+      <div className="mt-6 flex items-center gap-3">
+        <label className="text-sm font-medium text-slate-600 whitespace-nowrap">
+          演示密码
+        </label>
+        <input
+          type="password"
+          value={password}
+          onChange={(e) => {
+            setPassword(e.target.value);
+            localStorage.setItem("demo_access_password", e.target.value);
+          }}
+          placeholder="请输入演示密码"
+          className="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-900 placeholder:text-slate-400 focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
+        />
+      </div>
 
       <div className="mt-2">
         <DocumentList documents={documents} loading={loading} error={error} />

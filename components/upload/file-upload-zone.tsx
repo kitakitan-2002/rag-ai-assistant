@@ -6,9 +6,10 @@ const MAX_FILE_SIZE = 5 * 1024 * 1024;
 
 interface Props {
   onUploadSuccess: () => void;
+  password?: string;
 }
 
-export function FileUploadZone({ onUploadSuccess }: Props) {
+export function FileUploadZone({ onUploadSuccess, password }: Props) {
   const [dragging, setDragging] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [message, setMessage] = useState<{
@@ -39,9 +40,13 @@ export function FileUploadZone({ onUploadSuccess }: Props) {
     formData.append("file", file);
 
     try {
+      const headers: Record<string, string> = {};
+      if (password) headers["x-demo-password"] = password;
+
       const res = await fetch("/api/documents", {
         method: "POST",
         body: formData,
+        headers,
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || "上传失败");

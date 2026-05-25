@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { embedTexts } from "@/lib/rag/embedder";
 import { retrieveChunks } from "@/lib/rag/retriever";
 import { generateAnswer } from "@/lib/rag/generator";
+import { checkDemoPassword } from "@/lib/auth/password";
 
 const CONTENT_PREVIEW_LENGTH = 200;
 const DISPLAY_SOURCE_THRESHOLD = 0.32;
@@ -15,6 +16,9 @@ interface Source {
 }
 
 export async function POST(request: Request) {
+  const authError = checkDemoPassword(request);
+  if (authError) return authError;
+
   let question: string;
 
   try {

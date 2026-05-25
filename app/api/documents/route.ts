@@ -1,10 +1,14 @@
 import { NextResponse } from "next/server";
 import { getServerClient } from "@/lib/supabase/server";
 import { ingestDocument } from "@/lib/ingestion/pipeline";
+import { checkDemoPassword } from "@/lib/auth/password";
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
 
 export async function POST(request: Request) {
+  const authError = checkDemoPassword(request);
+  if (authError) return authError;
+
   const formData = await request.formData();
   const file = formData.get("file");
 

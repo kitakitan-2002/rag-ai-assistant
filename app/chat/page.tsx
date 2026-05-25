@@ -16,6 +16,10 @@ export default function ChatPage() {
   const [answer, setAnswer] = useState<string | null>(null);
   const [sources, setSources] = useState<Source[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [password, setPassword] = useState(() => {
+    if (typeof window === "undefined") return "";
+    return localStorage.getItem("demo_access_password") ?? "";
+  });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -30,7 +34,10 @@ export default function ChatPage() {
     try {
       const res = await fetch("/api/chat", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(password ? { "x-demo-password": password } : {}),
+        },
         body: JSON.stringify({ question: trimmed }),
       });
       const json = await res.json();
@@ -56,6 +63,22 @@ export default function ChatPage() {
         <p className="mt-4 max-w-2xl text-base leading-7 text-slate-600">
           基于已上传知识库进行 RAG 问答，AI 将根据文档内容生成回答并附上来源引用。
         </p>
+      </div>
+
+      <div className="mb-6 flex items-center gap-3">
+        <label className="text-sm font-medium text-slate-600 whitespace-nowrap">
+          演示密码
+        </label>
+        <input
+          type="password"
+          value={password}
+          onChange={(e) => {
+            setPassword(e.target.value);
+            localStorage.setItem("demo_access_password", e.target.value);
+          }}
+          placeholder="请输入演示密码"
+          className="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-900 placeholder:text-slate-400 focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
+        />
       </div>
 
       {/* 输入区域 */}
