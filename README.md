@@ -41,6 +41,7 @@ Enterprise Knowledge Base RAG Assistant — 基于 RAG（Retrieval-Augmented Gen
 - `/chat` 问答页面
 - 来源引用展示
 - 错误提示和空状态处理
+- Demo Access Password 保护，上传和问答接口需演示密码
 
 ## 技术栈
 
@@ -105,6 +106,7 @@ http://localhost:3000
 | `DEEPSEEK_PRO_MODEL` | DeepSeek 高质量模型 |
 | `RETRIEVAL_TOP_K` | RAG 检索返回片段数量，默认 5 |
 | `SIMILARITY_THRESHOLD` | 相似度召回阈值，当前 MVP 建议 0.3 |
+| `DEMO_ACCESS_PASSWORD` | 演示访问密码，用于保护上传和问答接口 |
 
 ## 数据库
 
@@ -127,7 +129,9 @@ supabase/migrations/002_match_document_chunks.sql
 上传 TXT 文件：
 
 ```bash
-curl -X POST http://localhost:3000/api/documents -F "file=@your-file.txt"
+curl -X POST http://localhost:3000/api/documents \
+  -H "x-demo-password: your-password" \
+  -F "file=@your-file.txt"
 ```
 
 成功响应示例：
@@ -147,6 +151,7 @@ RAG 问答：
 ```bash
 curl -X POST http://localhost:3000/api/chat \
   -H "Content-Type: application/json" \
+  -H "x-demo-password: your-password" \
   -d "{\"question\":\"员工出差报销需要几天内提交材料？\"}"
 ```
 
@@ -167,9 +172,16 @@ curl -X POST http://localhost:3000/api/chat \
 }
 ```
 
+## 版本记录
+
+| 版本 | 内容 |
+|------|------|
+| V1.0 MVP | 文档上传、Embedding 入库、RAG 问答、来源引用、Vercel 部署 |
+| V1.1 | Demo 密码保护、后续计划：文档删除、来源展示优化 |
+
 ## 后续计划
 
 | 方向 | 内容 |
 |------|------|
-| 后续优化 | PDF 支持、Streaming、多轮对话、Rerank、BM25、登录权限 |
+| 后续优化 | 文档删除、PDF 支持、Streaming、多轮对话、Rerank、BM25、正式用户认证与权限系统 |
 | 国内访问优化 | 可后续评估 Zeabur、腾讯云 EdgeOne Pages 或云服务器部署 |
