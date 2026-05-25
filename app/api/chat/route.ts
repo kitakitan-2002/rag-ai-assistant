@@ -4,6 +4,7 @@ import { retrieveChunks } from "@/lib/rag/retriever";
 import { generateAnswer } from "@/lib/rag/generator";
 
 const CONTENT_PREVIEW_LENGTH = 200;
+const DISPLAY_SOURCE_THRESHOLD = 0.32;
 
 interface Source {
   document_id: string;
@@ -77,16 +78,18 @@ export async function POST(request: Request) {
     );
   }
 
-  const sources: Source[] = chunks.map((chunk) => ({
-    document_id: chunk.document_id,
-    filename: chunk.chunk_filename,
-    chunk_index: chunk.chunk_index,
-    content_preview:
-      chunk.chunk_content.length > CONTENT_PREVIEW_LENGTH
-        ? chunk.chunk_content.slice(0, CONTENT_PREVIEW_LENGTH) + "…"
-        : chunk.chunk_content,
-    similarity: chunk.similarity,
-  }));
+  const sources: Source[] = chunks
+    .filter((chunk) => chunk.similarity >= DISPLAY_SOURCE_THRESHOLD)
+    .map((chunk) => ({
+      document_id: chunk.document_id,
+      filename: chunk.chunk_filename,
+      chunk_index: chunk.chunk_index,
+      content_preview:
+        chunk.chunk_content.length > CONTENT_PREVIEW_LENGTH
+          ? chunk.chunk_content.slice(0, CONTENT_PREVIEW_LENGTH) + "…"
+          : chunk.chunk_content,
+      similarity: chunk.similarity,
+    }));
 
   return NextResponse.json({ answer, sources });
 }
