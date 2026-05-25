@@ -19,7 +19,8 @@ export async function POST(request: Request) {
   try {
     const body = (await request.json()) as { question?: string };
     question = (body.question ?? "").trim();
-  } catch {
+  } catch (e) {
+    console.error("[chat] parse body failed:", e);
     return NextResponse.json(
       { error: "请求体格式错误" },
       { status: 400 }
@@ -37,7 +38,8 @@ export async function POST(request: Request) {
 
   try {
     queryEmbedding = await embedTexts([question]);
-  } catch {
+  } catch (e) {
+    console.error("[chat] embed failed:", e);
     return NextResponse.json(
       { error: "生成查询向量失败" },
       { status: 500 }
@@ -48,7 +50,8 @@ export async function POST(request: Request) {
 
   try {
     chunks = await retrieveChunks(queryEmbedding[0]);
-  } catch {
+  } catch (e) {
+    console.error("[chat] retrieve failed:", e);
     return NextResponse.json(
       { error: "文档检索失败" },
       { status: 500 }
@@ -66,7 +69,8 @@ export async function POST(request: Request) {
 
   try {
     answer = await generateAnswer({ question, chunks });
-  } catch {
+  } catch (e) {
+    console.error("[chat] generate failed:", e);
     return NextResponse.json(
       { error: "生成回答失败" },
       { status: 500 }

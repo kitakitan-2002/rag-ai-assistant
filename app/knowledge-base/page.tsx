@@ -16,12 +16,23 @@ interface Document {
 export default function KnowledgeBasePage() {
   const [documents, setDocuments] = useState<Document[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const fetchDocuments = useCallback(async () => {
     setLoading(true);
+    setError(null);
     try {
       const res = await fetch("/api/documents");
-      if (res.ok) setDocuments(await res.json());
+      if (!res.ok) {
+        const json = await res.json().catch(() => null);
+        setError((json as { error?: string })?.error ?? "获取文档列表失败");
+        setDocuments([]);
+      } else {
+        setDocuments(await res.json());
+      }
+    } catch {
+      setError("网络请求失败，请检查网络连接");
+      setDocuments([]);
     } finally {
       setLoading(false);
     }
@@ -49,7 +60,7 @@ export default function KnowledgeBasePage() {
       <FileUploadZone onUploadSuccess={fetchDocuments} />
 
       <div className="mt-2">
-        <DocumentList documents={documents} loading={loading} />
+        <DocumentList documents={documents} loading={loading} error={error} />
       </div>
     </div>
   );

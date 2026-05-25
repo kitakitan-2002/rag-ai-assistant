@@ -123,6 +123,14 @@ export default function ChatPage() {
       )}
 
       {/* 来源引用 */}
+      {answer && sources.length === 0 && !loading && (
+        <div className="mt-10">
+          <h2 className="text-lg font-semibold text-slate-950">来源引用</h2>
+          <div className="mt-4 rounded-md border border-slate-200 bg-white p-8 text-center shadow-sm">
+            <p className="text-sm text-slate-500">暂无来源引用</p>
+          </div>
+        </div>
+      )}
       {sources.length > 0 && (
         <div className="mt-10">
           <h2 className="text-lg font-semibold text-slate-950">

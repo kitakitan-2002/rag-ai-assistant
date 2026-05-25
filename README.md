@@ -1,6 +1,6 @@
 # 企业知识库 RAG 助手
 
-Enterprise Knowledge Base RAG Assistant — 基于 RAG（Retrieval-Augmented Generation）的企业知识库问答系统。当前版本已实现文档上传、文本切分、Embedding 向量化与 Supabase pgvector 入库。后续将接入自然语言问答与来源引用。
+Enterprise Knowledge Base RAG Assistant — 基于 RAG（Retrieval-Augmented Generation）的企业知识库问答系统。已实现文档上传、文本切分、Embedding 向量化、pgvector 检索与 DeepSeek 自然语言问答，支持来源引用。
 
 ## 当前进度
 
@@ -10,17 +10,20 @@ Enterprise Knowledge Base RAG Assistant — 基于 RAG（Retrieval-Augmented Gen
 | Step 2 | Supabase 初始化（pgvector + 数据库建表） | ✅ 已完成 |
 | Step 3 | 首页 + 布局（项目介绍 + 功能入口卡片） | ✅ 已完成 |
 | Step 4 | 文档上传 API + 文本切分 + Embedding 入库 | ✅ 已完成 |
-| Step 5 | 知识库管理页面 | ⬜ 待开始 |
-| Step 6 | 问答 API（POST /api/chat） | ⬜ 待开始 |
-| Step 7 | 问答页面 | ⬜ 待开始 |
-| Step 8 | 错误处理 + 边界状态 | ⬜ 待开始 |
+| Step 5 | 知识库管理页面 | ✅ 已完成 |
+| Step 6 | 问答 API（POST /api/chat） | ✅ 已完成 |
+| Step 7 | 问答页面 | ✅ 已完成 |
+| Step 8 | 错误处理 + 边界状态 | ✅ 已完成 |
 | Step 9 | 部署 | ⬜ 待开始 |
 
 ## 已实现功能
 
 - 首页与导航（项目介绍 + 功能入口卡片）
-- `/knowledge-base` 占位页
-- `/chat` 占位页
+- `/knowledge-base` 知识库管理页面
+- 文件上传组件（拖拽 + 点击上传）
+- 文档列表展示
+- 文档状态展示 `processing` / `ready` / `failed`
+- `GET /api/documents` 文档列表接口
 - `POST /api/documents` 文档上传 API
 - TXT / Markdown 文件校验
 - 5MB 文件大小限制
@@ -28,9 +31,12 @@ Enterprise Knowledge Base RAG Assistant — 基于 RAG（Retrieval-Augmented Gen
 - 文本切分（RecursiveCharacterTextSplitter）
 - SiliconFlow `BAAI/bge-m3` Embedding
 - 写入 `documents` / `document_chunks`
-- 文档状态管理：`processing` / `ready` / `failed`
-
-> DeepSeek 问答 API（`POST /api/chat`）尚未实现，将在 Step 6 完成。
+- `POST /api/chat` RAG 问答接口
+- Supabase RPC `match_document_chunks` 相似度检索
+- DeepSeek 回答生成
+- `/chat` 问答页面
+- 来源引用展示
+- 错误提示和空状态处理
 
 ## 技术栈
 
@@ -42,7 +48,7 @@ Enterprise Knowledge Base RAG Assistant — 基于 RAG（Retrieval-Augmented Gen
 | 数据库 | Supabase PostgreSQL |
 | 向量检索 | Supabase pgvector |
 | Embedding | SiliconFlow `BAAI/bge-m3` |
-| Chat 生成 | DeepSeek Chat API（后续接入） |
+| Chat 生成 | DeepSeek Chat API |
 | 部署 | Vercel |
 
 ## 本地运行
@@ -89,10 +95,12 @@ http://localhost:3000
 | `SILICONFLOW_API_KEY` | SiliconFlow API Key |
 | `SILICONFLOW_BASE_URL` | SiliconFlow API 地址 |
 | `EMBEDDING_MODEL` | Embedding 模型名 |
-| `DEEPSEEK_API_KEY` | DeepSeek API Key，Step 6 使用 |
+| `DEEPSEEK_API_KEY` | DeepSeek API Key |
 | `DEEPSEEK_BASE_URL` | DeepSeek API 地址 |
 | `DEEPSEEK_CHAT_MODEL` | DeepSeek Chat 模型 |
 | `DEEPSEEK_PRO_MODEL` | DeepSeek 高质量模型 |
+| `RETRIEVAL_TOP_K` | RAG 检索返回片段数量，默认 5 |
+| `SIMILARITY_THRESHOLD` | 相似度召回阈值，当前 MVP 建议 0.3 |
 
 ## 数据库
 
@@ -100,6 +108,7 @@ http://localhost:3000
 
 ```text
 supabase/migrations/001_init.sql
+supabase/migrations/002_match_document_chunks.sql
 ```
 
 主要数据表：
@@ -129,12 +138,34 @@ curl -X POST http://localhost:3000/api/documents -F "file=@your-file.txt"
 }
 ```
 
+RAG 问答：
+
+```bash
+curl -X POST http://localhost:3000/api/chat \
+  -H "Content-Type: application/json" \
+  -d "{\"question\":\"员工出差报销需要几天内提交材料？\"}"
+```
+
+成功响应示例：
+
+```json
+{
+  "answer": "员工出差报销需要在 7 个工作日内提交发票和审批单。",
+  "sources": [
+    {
+      "document_id": "doc-id",
+      "filename": "expense-policy.md",
+      "chunk_index": 0,
+      "content_preview": "员工出差报销需要在 7 个工作日内...",
+      "similarity": 0.92
+    }
+  ]
+}
+```
+
 ## 后续计划
 
 | 步骤 | 内容 |
 |------|------|
-| Step 5 | 知识库管理页面：上传组件、文档列表、删除 |
-| Step 6 | 问答 API：pgvector 检索 + DeepSeek 生成 |
-| Step 7 | 问答页面：输入框、回答展示、来源引用 |
-| Step 8 | 错误处理与边界状态完善 |
 | Step 9 | Vercel 部署 |
+| 后续优化 | PDF 支持、Streaming、多轮对话、Rerank、BM25、登录权限 |

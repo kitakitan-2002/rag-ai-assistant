@@ -52,6 +52,7 @@ export async function POST(request: Request) {
     .single();
 
   if (insertError || !doc) {
+    console.error("[documents] create failed:", insertError);
     return NextResponse.json({ error: "文档创建失败" }, { status: 500 });
   }
 
@@ -70,7 +71,7 @@ export async function POST(request: Request) {
       chunk_count: result.chunkCount,
     });
   } catch (e) {
-    console.error("文档处理失败:", e);
+    console.error("[documents] process failed:", e);
     return NextResponse.json({ error: "文档处理失败" }, { status: 500 });
   }
 }

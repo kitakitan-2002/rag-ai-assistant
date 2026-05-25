@@ -26,9 +26,18 @@ function formatTime(iso: string): string {
 interface Props {
   documents: Document[];
   loading: boolean;
+  error?: string | null;
 }
 
-export function DocumentList({ documents, loading }: Props) {
+export function DocumentList({ documents, loading, error }: Props) {
+  if (error) {
+    return (
+      <div className="mt-10 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-800">
+        {error}
+      </div>
+    );
+  }
+
   if (loading) {
     return (
       <div className="mt-10 flex items-center gap-3 text-sm text-slate-500">
