@@ -14,7 +14,11 @@ Enterprise Knowledge Base RAG Assistant — 基于 RAG（Retrieval-Augmented Gen
 | Step 6 | 问答 API（POST /api/chat） | ✅ 已完成 |
 | Step 7 | 问答页面 | ✅ 已完成 |
 | Step 8 | 错误处理 + 边界状态 | ✅ 已完成 |
-| Step 9 | 部署 | ⬜ 待开始 |
+| Step 9 | 部署 | ✅ 已完成 |
+
+## 在线预览
+
+- Vercel: https://rag-ai-assistant-bay.vercel.app
 
 ## 已实现功能
 
@@ -165,7 +169,7 @@ curl -X POST http://localhost:3000/api/chat \
 
 ## 后续计划
 
-| 步骤 | 内容 |
+| 方向 | 内容 |
 |------|------|
-| Step 9 | Vercel 部署 |
 | 后续优化 | PDF 支持、Streaming、多轮对话、Rerank、BM25、登录权限 |
+| 国内访问优化 | 可后续评估 Zeabur、腾讯云 EdgeOne Pages 或云服务器部署 |
