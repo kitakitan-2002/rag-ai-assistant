@@ -75,9 +75,16 @@ export default function Home() {
             href={card.href}
             className="group rounded-md border border-slate-200 bg-white p-6 shadow-sm transition hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md"
           >
-            <h2 className="text-xl font-semibold text-slate-950">
-              {card.title}
-            </h2>
+            <div className="flex items-center justify-between gap-3">
+              <h2 className="text-xl font-semibold text-slate-950">
+                {card.title}
+              </h2>
+              {card.href === "/knowledge-base" ? (
+                <span className="shrink-0 rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
+                  目前仅支持单知识库
+                </span>
+              ) : null}
+            </div>
             <p className="mt-3 min-h-14 text-sm leading-6 text-slate-600">
               {card.description}
             </p>
