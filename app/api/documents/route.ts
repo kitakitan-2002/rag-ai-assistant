@@ -89,6 +89,7 @@ export async function GET() {
     .order("created_at", { ascending: false });
 
   if (error) {
+    console.error("[documents] list failed:", error);
     return NextResponse.json({ error: "获取文档列表失败" }, { status: 500 });
   }
 
