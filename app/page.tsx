@@ -16,7 +16,7 @@ const entryCards = [
   },
   {
     title: "智能问答",
-    description: "面向已入库文档发起单轮问题，展示回答与来源引用。",
+    description: "基于已入库文档进行多轮问答，支持上下文记忆、流式回答与来源引用。",
     href: "/chat",
     action: "开始问答",
   },
