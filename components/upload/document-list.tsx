@@ -43,12 +43,22 @@ interface Props {
   documents: Document[];
   loading: boolean;
   error?: string | null;
+  password: string;
+  onDeleteSuccess: () => void | Promise<void>;
 }
 
-export function DocumentList({ documents, loading, error }: Props) {
+export function DocumentList({
+  documents,
+  loading,
+  error,
+  password,
+  onDeleteSuccess,
+}: Props) {
   const [selected, setSelected] = useState<DocumentDetail | null>(null);
   const [detailLoadingId, setDetailLoadingId] = useState<string | null>(null);
   const [detailError, setDetailError] = useState<string | null>(null);
+  const [deleteLoadingId, setDeleteLoadingId] = useState<string | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   async function handleView(doc: Document) {
     setDetailLoadingId(doc.id);
@@ -68,6 +78,42 @@ export function DocumentList({ documents, loading, error }: Props) {
       setDetailError("网络请求失败，请稍后重试");
     } finally {
       setDetailLoadingId(null);
+    }
+  }
+
+  async function handleDelete(doc: Document) {
+    const confirmed = window.confirm(
+      `确定要删除「${doc.filename}」吗？删除后该文档的分块也会一并移除。`
+    );
+
+    if (!confirmed) return;
+
+    setDeleteLoadingId(doc.id);
+    setDeleteError(null);
+
+    try {
+      const res = await fetch(`/api/documents/${doc.id}`, {
+        method: "DELETE",
+        headers: {
+          "x-demo-password": password,
+        },
+      });
+      const json = await res.json().catch(() => null);
+
+      if (!res.ok) {
+        setDeleteError((json as { error?: string })?.error ?? "删除文档失败");
+        return;
+      }
+
+      if (selected?.document.id === doc.id) {
+        setSelected(null);
+      }
+
+      await onDeleteSuccess();
+    } catch {
+      setDeleteError("网络请求失败，请稍后重试");
+    } finally {
+      setDeleteLoadingId(null);
     }
   }
 
@@ -139,6 +185,7 @@ export function DocumentList({ documents, loading, error }: Props) {
                 color: "bg-slate-100 text-slate-700",
               };
               const isLoading = detailLoadingId === doc.id;
+              const isDeleting = deleteLoadingId === doc.id;
 
               return (
                 <tr
@@ -163,14 +210,26 @@ export function DocumentList({ documents, loading, error }: Props) {
                     {formatTime(doc.created_at)}
                   </td>
                   <td className="px-5 py-3">
-                    <button
-                      type="button"
-                      onClick={() => void handleView(doc)}
-                      disabled={isLoading || doc.status !== "ready"}
-                      className="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
-                    >
-                      {isLoading ? "加载中" : "查看"}
-                    </button>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => void handleView(doc)}
+                        disabled={
+                          isLoading || isDeleting || doc.status !== "ready"
+                        }
+                        className="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        {isLoading ? "加载中" : "查看"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => void handleDelete(doc)}
+                        disabled={isDeleting}
+                        className="rounded-md border border-red-200 px-3 py-1.5 text-sm font-medium text-red-700 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        {isDeleting ? "删除中" : "删除"}
+                      </button>
+                    </div>
                   </td>
                 </tr>
               );
@@ -182,6 +241,12 @@ export function DocumentList({ documents, loading, error }: Props) {
       {detailError ? (
         <div className="mt-3 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-800">
           {detailError}
+        </div>
+      ) : null}
+
+      {deleteError ? (
+        <div className="mt-3 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-800">
+          {deleteError}
         </div>
       ) : null}
 

@@ -22,6 +22,22 @@ export interface DocumentChunk {
   created_at: string;
 }
 
+export interface Conversation {
+  id: string;
+  title: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Message {
+  id: string;
+  conversation_id: string;
+  role: "user" | "assistant";
+  content: string;
+  sources: Source[];
+  created_at: string;
+}
+
 // ── API types ──
 
 export interface Source {
@@ -29,6 +45,7 @@ export interface Source {
   filename: string;
   chunk_index: number;
   content_preview: string;
+  similarity?: number;
 }
 
 export interface UploadDocumentResponse {

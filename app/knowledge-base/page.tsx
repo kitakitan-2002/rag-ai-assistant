@@ -80,7 +80,13 @@ export default function KnowledgeBasePage() {
       </div>
 
       <div className="mt-2">
-        <DocumentList documents={documents} loading={loading} error={error} />
+        <DocumentList
+          documents={documents}
+          loading={loading}
+          error={error}
+          password={password}
+          onDeleteSuccess={fetchDocuments}
+        />
       </div>
     </div>
   );
